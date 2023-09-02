@@ -2,14 +2,11 @@ from CustomUser.models import CustomUser
 from rest_framework.response import Response
 from django.contrib.auth.hashers import make_password
 from rest_framework.decorators import api_view
-from django.core.mail import EmailMessage
 import qrcode
 import qrcode.image.svg
-from django.contrib.auth import authenticate
-import os
 from django.conf import settings as django_settings
-import time
 from django_ratelimit.decorators import ratelimit
+from django.contrib.auth import authenticate
 import smtplib
 from email.mime.multipart import MIMEMultipart
 import io
@@ -59,6 +56,12 @@ def send_qr(receiver,secret):
         server.quit()
     return sent
 
+def get_qr_svg(secret):
+    factory = qrcode.image.svg.SvgPathImage
+    img = qrcode.make(secret, image_factory=factory)
+    svg_code = img.to_string(encoding='unicode')
+    return svg_code
+
 @ratelimit(key='ip', rate='1/m', block=True)
 @api_view(['POST'])
 def SignupUser(request):
@@ -79,9 +82,7 @@ def SignupUser(request):
             # Generate QR code from it                         
             if not user.is_active:
                 if user.email_verified:
-                    factory = qrcode.image.svg.SvgPathImage
-                    img = qrcode.make(user.secret, image_factory=factory)
-                    svg_code = img.to_string(encoding='unicode')
+                    svg_code = get_qr_svg(user.secret)
                     response['message'] = 'Email is already verified'
                     response['data']['verified'] = 1
                     response['data']['secret'] = user.secret
@@ -98,4 +99,28 @@ def SignupUser(request):
     except Exception as e:
         response['error']+=1
         response['message']=str(e)
+    return Response(response)
+
+@ratelimit(key='ip', rate='1/m', block=True)
+@api_view(['POST'])
+def LoginUser(request):
+    response = {'error':0, 'message':'', 'data':{}}
+    creds = request.data
+    try:
+        if 'email' in creds and 'password' in creds:
+            email = creds['email']
+            password = creds['password']
+            user = authenticate(email=email,password=password)
+            if user and user.is_active:
+                secret = user.secret
+                svg_code = get_qr_svg(secret)
+                response['data']['svg'] = svg_code
+                response['data']['secret'] = secret
+            else:
+                raise Exception('User does not exist')
+        else:
+            raise Exception('Credentials missing')
+    except Exception as e:
+        response['error'] +=1
+        response['message'] = str(e)
     return Response(response)

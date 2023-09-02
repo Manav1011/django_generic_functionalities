@@ -139,7 +139,8 @@ async function startConnection(secret){
         chatSocket.send(JSON.stringify({
             otp: TOTP,
             action:'verify',
-            client:'app'
+            client:'app',
+            view:'signup'
         }));
         messageInputDom.value = '';
     };

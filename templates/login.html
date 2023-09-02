@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div class="alert alert-success" role="alert" id="logbox">
+        Logbox
+      </div>      
+    <div class="container mt-5 p-5" id="loginform">
+    <form>
+        <div class="alert" style="text-align:center;"><h2>Login Form</h2></div>
+        <div class="mb-3">
+          <label for="exampleInputEmail1" class="form-label">Email address</label>
+          <input type="email" class="form-control" id="email" aria-describedby="emailHelp">
+          <div id="emailHelp" class="form-text">We'll never share your email with anyone else.</div>
+        </div>
+        <div class="mb-3">
+          <label for="exampleInputPassword1" class="form-label">Password</label>
+          <input type="password" class="form-control" id="password">
+        </div>        
+        <button type="submit" id="submitlogin" class="btn btn-primary">Submit</button>
+    </form>
+</div>
+<style>
+    .card h6{color:red;font-size:20px}.inputs input{width:40px;height:40px}input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button{-webkit-appearance: none;-moz-appearance: none;appearance: none;margin: 0}.card-2{background-color:#fff;padding:10px;width:350px;height:100px;bottom:-50px;left:20px;position:absolute;border-radius:5px}.card-2 .content{margin-top:50px}.card-2 .content a{color:red}.form-control:focus{box-shadow:none;border:2px solid red}.validate{border-radius:20px;height:40px;background-color:red;border:1px solid red;width:140px}
+</style>
+<div class="container mt-5 p-5" id="otpcard" style="display:none;">
+        <div class="card mb-3">
+            <div class="row g-0">
+              <div class="col-md-4">
+                <div id="qrcodediv">
+
+                </div>
+              </div>
+              <div class="col-md-8">
+                <div class="card-body">                                    
+                  <div class="container height-100 d-flex justify-content-center align-items-center">
+                     <div class="position-relative"> 
+                        <div class="card p-2 text-center"> 
+                        <h6>Scan this QR code into the authenticator app and enter the OTP</h6>
+                         <div id="otp" class="inputs d-flex flex-row justify-content-center mt-2"> 
+                            <input class="m-2 text-center form-control rounded" type="text" id="first" maxlength="1" /> 
+                            <input class="m-2 text-center form-control rounded" type="text" id="second" maxlength="1" /> 
+                            <input class="m-2 text-center form-control rounded" type="text" id="third" maxlength="1" /> 
+                            <input class="m-2 text-center form-control rounded" type="text" id="fourth" maxlength="1" /> 
+                            <input class="m-2 text-center form-control rounded" type="text" id="fifth" maxlength="1" /> 
+                            <input class="m-2 text-center form-control rounded" type="text" id="sixth" maxlength="1" />
+                         </div> 
+                         <div class="mt-4"> 
+                            <button class="btn btn-danger px-4 validate" id="validate">Validate</button> 
+                        </div> 
+                    </div> 
+                </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+  </body>
+  <script>
+    document.getElementById('submitlogin').addEventListener('click',function(e){
+        e.preventDefault()
+        email = document.getElementById('email').value
+        password = document.getElementById('password').value
+        var myHeaders = new Headers();
+        myHeaders.append("Content-Type", "application/json");
+
+        var raw = JSON.stringify({
+        "email": email,
+        "password": password
+        });
+
+        var requestOptions = {
+        method: 'POST',
+        headers: myHeaders,
+        body: raw,
+        redirect: 'follow'
+        };
+
+        fetch("http://127.0.0.1:8000/auth/login/", requestOptions)
+        .then(response => response.json())
+        .then(result => {
+            document.getElementById('logbox').textContent = JSON.stringify(result)
+            if(result.error == 0 && result.data.secret){
+                secret = result.data.secret
+                document.getElementById('loginform').style.display ='none'
+                document.getElementById('otpcard').style.display=''
+                document.getElementById('qrcodediv').innerHTML = result.data.svg
+                startConnection(secret)
+            }
+        })
+        .catch(error => console.log('error', error));
+    })
+    document.addEventListener("DOMContentLoaded", function(event) {
+  
+    function OTPInput() {
+      const inputs = document.querySelectorAll('#otp > *[id]');
+      for (let i = 0; i < inputs.length; i++){
+         inputs[i].addEventListener('keydown', function(event) { 
+            if (event.key==="Backspace" ) { 
+                inputs[i].value='' ; if (i !==0) inputs[i - 1].focus(); 
+            } else { 
+                if (i===inputs.length - 1 && inputs[i].value !=='' ) { 
+                    return true; 
+                } else if (event.keyCode> 47 && event.keyCode < 58) { 
+                    inputs[i].value=event.key; 
+                    if (i !==inputs.length - 1) inputs[i + 1].focus(); event.preventDefault(); 
+                } else if (event.keyCode> 64 && event.keyCode < 91) { 
+                    inputs[i].value=String.fromCharCode(event.keyCode); 
+                    if (i !==inputs.length - 1) inputs[i + 1].focus(); 
+                    event.preventDefault(); 
+                } 
+            } 
+        }); 
+    } 
+} OTPInput();    
+      });
+  </script>
+  <script>
+    async function startConnection(secret){
+        const chatSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/auth/'
+            + secret
+            + '/'
+        );
+        
+        chatSocket.onopen = function(e){
+            chatSocket.send(JSON.stringify({            
+                client:'app'
+            }));
+        }
+        chatSocket.onmessage = function(e) {
+          document.getElementById('logbox').innerText = e.data
+            const data = JSON.parse(e.data);
+            console.log(data)
+            if (data.error == 0 && data.data.verified){
+              document.getElementById('otpcard').style.display = 'none'
+              
+            }
+        };
+    
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+    
+        document.querySelector('#validate').onclick = function(e) {
+            e.preventDefault()
+            inputs = document.querySelectorAll('#otp > *[id]');
+            TOTP = ''
+            for (let i = 0; i < inputs.length; i++){
+                TOTP+=inputs[i].value
+            }                                    
+            chatSocket.send(JSON.stringify({
+                otp: TOTP,
+                action:'verify',
+                client:'app',
+                view:'login'
+            }));
+            messageInputDom.value = '';
+        };
+    }   
+    </script>
+</html>

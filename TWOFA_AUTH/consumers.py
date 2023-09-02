@@ -4,7 +4,6 @@ from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 import numpy as np
 import asyncio
-import time
 from django.core.cache import cache
 
 class AuthConsumer(AsyncWebsocketConsumer):    
@@ -26,7 +25,10 @@ class AuthConsumer(AsyncWebsocketConsumer):
         if text_data["client"] == "authenticator":            
             if 'action' not in text_data:
                 org_val = await self.get_latest_cache()              
-                if org_val['authenticator'] > 0:                
+                if org_val['authenticator'] > 0: 
+                    self.response['error']+=1
+                    self.response['message'] = 'Request Limit Exceeded please try again after a minute'
+                    await self.send(json.dumps(self.response))               
                     await self.close()
                 else:                
                     org_val['authenticator']+=1
@@ -36,14 +38,46 @@ class AuthConsumer(AsyncWebsocketConsumer):
         elif text_data["client"] == "app":
             if 'action' not in text_data:
                 org_val = await self.get_latest_cache() 
-                if org_val['app'] > 0:
+                if org_val['app'] > 0: 
+                    self.response['error']+=1
+                    self.response['message'] = 'Request Limit Exceeded please try again after a minute'
+                    await self.send(json.dumps(self.response))               
                     await self.close()
                 else:                
                     org_val['app']+=1
                     cache.set(self.secret,org_val,60)            
             if 'action' in text_data and text_data['action']=='verify' and 'otp' in text_data:
                 self.otp = text_data['otp']
-                await self.verify_otp()
+                verified = await self.verify_otp()
+                if verified == True:
+                    org_val = await self.get_latest_cache() 
+                    if text_data['view'] == 'signup':
+                        self.user.email_verified = True
+                        self.user.is_active = True
+                        await self.save_user_obj()
+                        self.response['error'] = 0
+                        self.response['message'] = 'User successfully signed up'
+                        org_val['closed'] = True
+                        cache.set(self.secret,org_val,60)
+                        self.response['data'] = {'verified':True,'secret':self.secret}
+                        await self.send(json.dumps(self.response))
+                    if text_data['view'] == 'login':
+                        self.response['error'] = 0
+                        self.response['message'] = 'User successfully Logged up'
+                        org_val['closed'] = True
+                        cache.set(self.secret,org_val,60)
+                        self.response['data'] = {'verified':True,'token':"we'll send auth tokens in the future"}
+                        await self.send(json.dumps(self.response))
+                    await self.close()
+                elif verified == False:
+                    self.response['error']+=1
+                    self.response['message'] = 'OTP is wrong OR expired please try the latest one'
+                    await self.send(json.dumps(self.response))       
+                else:
+                    self.response['error']+=1
+                    self.response['message'] = 'Please scan the QR code first'
+                    await self.send(json.dumps(self.response))  
+
     
     async def get_latest_cache(self):
         if not cache.has_key(self.secret):            
@@ -54,24 +88,11 @@ class AuthConsumer(AsyncWebsocketConsumer):
         org_val = await self.get_latest_cache() 
         if 'otp' in org_val:            
             if self.otp == org_val['otp']:
-                self.user.email_verified = True
-                self.user.is_active = True
-                await self.save_user_obj()
-                self.response['error'] = 0
-                self.response['message'] = 'User successfully signed up'
-                org_val['closed'] = True
-                cache.set(self.secret,org_val,60)
-                self.response['data'] = {'verified':True,'secret':self.secret}
-                await self.send(json.dumps(self.response))
-                await self.close()
+                return True
             else:
-                self.response['error']+=1
-                self.response['message'] = 'OTP is expired please try the latest one'
-                await self.send(json.dumps(self.response))                
+                return False         
         else:
-            self.response['error']+=1
-            self.response['message'] = 'Please scan the QR code from the email first'
-            await self.send(json.dumps(self.response))  
+            return 404
 
     @database_sync_to_async
     def save_user_obj(self):
