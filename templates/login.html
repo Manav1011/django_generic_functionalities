@@ -13,6 +13,7 @@
       </div>      
     <div class="container mt-5 p-5" id="loginform">
     <form>
+      {% csrf_token %}
         <div class="alert" style="text-align:center;"><h2>Login Form</h2></div>
         <div class="mb-3">
           <label for="exampleInputEmail1" class="form-label">Email address</label>
@@ -67,9 +68,12 @@
     document.getElementById('submitlogin').addEventListener('click',function(e){
         e.preventDefault()
         email = document.getElementById('email').value
-        password = document.getElementById('password').value
+        password = document.getElementById('password').value        
         var myHeaders = new Headers();
+        var csrfToken = document.getElementsByName('csrfmiddlewaretoken')[0].value;
+
         myHeaders.append("Content-Type", "application/json");
+        myHeaders.append("X-CSRFToken", csrfToken); // Add the CSRF token to headers
 
         var raw = JSON.stringify({
         "email": email,
@@ -83,7 +87,7 @@
         redirect: 'follow'
         };
 
-        fetch("http://127.0.0.1:8000/auth/login/", requestOptions)
+        fetch("https://33f8-2405-201-2024-b925-43ae-3439-d305-8abe.ngrok-free.app/auth/login/", requestOptions)
         .then(response => response.json())
         .then(result => {
             document.getElementById('logbox').textContent = JSON.stringify(result)
@@ -125,7 +129,7 @@
   <script>
     async function startConnection(secret){
         const chatSocket = new WebSocket(
-            'ws://'
+            'wss://'
             + window.location.host
             + '/auth/'
             + secret

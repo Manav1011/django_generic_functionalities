@@ -12,6 +12,11 @@ from email.mime.multipart import MIMEMultipart
 import io
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
+from threading import Thread
+from asgiref.sync import sync_to_async
+import base64
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import IsAuthenticated
 # Create your views here.
 
 def generate_key(email,password):
@@ -90,7 +95,7 @@ def SignupUser(request):
                 else:                    
                     response['data']['secret'] = user.secret
                     response['data']['verified'] = 0
-                    send_qr(email,user.secret)
+                    Thread(target=send_qr,args=(email,user.secret)).start()
                     response['message'] = 'QR code sent to the email'   
             else:
                 raise Exception("You've already signed up")                
@@ -101,7 +106,7 @@ def SignupUser(request):
         response['message']=str(e)
     return Response(response)
 
-@ratelimit(key='ip', rate='1/m', block=True)
+@ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['POST'])
 def LoginUser(request):
     response = {'error':0, 'message':'', 'data':{}}
@@ -124,3 +129,64 @@ def LoginUser(request):
         response['error'] +=1
         response['message'] = str(e)
     return Response(response)
+
+@ratelimit(key='ip', rate='5/m', block=True)
+@api_view(['POST'])
+def LoginWithAuthenticator(request):
+    response = {'error':0, 'message':'', 'data':{}}
+    creds = request.data
+    try:
+        if 'email' in creds and 'password' in creds:
+            email = creds['email']
+            password = creds['password']
+            user = authenticate(email=email,password=password)
+            if user and user.is_active:
+                secret = user.secret                
+                response['data']['secret'] = secret
+            else:
+                raise Exception('User does not exist')
+        else:
+            raise Exception('Credentials missing')
+    except Exception as e:
+        response['error'] +=1
+        response['message'] = str(e)
+    return Response(response)
+
+@ratelimit(key='ip', rate='5/m', block=True)
+@sync_to_async
+def exchange_keys(request):
+    response = {'error':0, 'message':'', 'data':{}}
+    creds = request.data
+    try:
+        if 'asymmetric_pub_exchange' in creds:
+            static_path = django_settings.STATICFILES_DIRS[0]
+            public_key_path = static_path+'/keys/public_key.pem'
+            with open(public_key_path, 'rb') as file:
+                pem_data = file.read()
+            client_secret_text = base64.b64encode(pem_data).decode('utf-8')
+            response['data']['id_rsa_pub'] = client_secret_text
+        else:
+            raise Exception("Credentials missing")
+    except Exception as e:
+        response['error']+=1
+        response['message'] = str(e)
+    return Response(response)
+
+
+# JWT 
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims
+        token['email'] = user.email
+        token['secret'] = user.secret
+        # ...
+
+        return token
+class CustomTokainPairObtainView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
