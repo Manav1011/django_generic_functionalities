@@ -1,4 +1,5 @@
 venv
 *.sqlite3
 .env
-static/*.pem
+static/keys/private_key.pem
+static/keys/public_key.pem
