@@ -17,6 +17,8 @@ from asgiref.sync import sync_to_async
 import base64
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
 # Create your views here.
 
 def generate_key(email,password):
@@ -172,21 +174,12 @@ def exchange_keys(request):
         response['message'] = str(e)
     return Response(response)
 
-
-# JWT 
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
-
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
 
         # Add custom claims
-        token['email'] = user.email
-        token['secret'] = user.secret
+        token['email'] = user.email        
         # ...
-
         return token
-class CustomTokainPairObtainView(TokenObtainPairView):
-    serializer_class = CustomTokenObtainPairSerializer

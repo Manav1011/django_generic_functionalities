@@ -87,7 +87,7 @@
         redirect: 'follow'
         };
 
-        fetch("https://33f8-2405-201-2024-b925-43ae-3439-d305-8abe.ngrok-free.app/auth/login/", requestOptions)
+        fetch("/auth/login/", requestOptions)
         .then(response => response.json())
         .then(result => {
             document.getElementById('logbox').textContent = JSON.stringify(result)
@@ -129,7 +129,7 @@
   <script>
     async function startConnection(secret){
         const chatSocket = new WebSocket(
-            'wss://'
+            'ws://'
             + window.location.host
             + '/auth/'
             + secret

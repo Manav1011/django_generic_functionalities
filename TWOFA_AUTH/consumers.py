@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 import numpy as np
 import asyncio
 from django.core.cache import cache
+from .views import CustomTokenObtainPairSerializer
 
 class AuthConsumer(AsyncWebsocketConsumer):    
     async def connect(self):
@@ -66,7 +67,8 @@ class AuthConsumer(AsyncWebsocketConsumer):
                         self.response['message'] = 'User successfully Logged up'
                         org_val['closed'] = True
                         cache.set(self.secret,org_val,60)
-                        self.response['data'] = {'verified':True,'token':"we'll send auth tokens in the future"}
+                        tokens = await self.get_tokens()
+                        self.response['data'] = {'verified':True,'tokens':tokens}
                         await self.send(json.dumps(self.response))
                     await self.close()
                 elif verified == False:
@@ -118,7 +120,16 @@ class AuthConsumer(AsyncWebsocketConsumer):
             cache.set(self.secret,org_val,60)
             await self.send(json.dumps(self.otp))
             await asyncio.sleep(19)    
-
+    
+    @database_sync_to_async
+    def get_tokens(self):
+        obj = CustomTokenObtainPairSerializer()
+        refresh = obj.get_token(self.user)
+        tokens = {
+            'refresh':str(refresh),
+            'access':str(refresh.access_token)
+        }
+        return tokens
             
 
     

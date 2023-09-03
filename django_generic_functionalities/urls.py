@@ -34,7 +34,6 @@ schema_view = get_schema_view(
 from rest_framework_simplejwt.views import (    
     TokenRefreshView,
 )
-from TWOFA_AUTH.views import CustomTokainPairObtainView
 
 
 urlpatterns = [
@@ -45,7 +44,6 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('base/',TemplateView.as_view(template_name='base.html'),name='base'),
     path('signup/',TemplateView.as_view(template_name='signup.html'),name='signup'),
-    path('login/',TemplateView.as_view(template_name='login.html'),name='login'),
-    path('api/token/', CustomTokainPairObtainView.as_view(), name='token_obtain_pair'),
+    path('login/',TemplateView.as_view(template_name='login.html'),name='login'),    
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
