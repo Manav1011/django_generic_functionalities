@@ -18,7 +18,7 @@ import base64
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
+from .models import KeyStore
 # Create your views here.
 
 def generate_key(email,password):
@@ -151,26 +151,6 @@ def LoginWithAuthenticator(request):
             raise Exception('Credentials missing')
     except Exception as e:
         response['error'] +=1
-        response['message'] = str(e)
-    return Response(response)
-
-@ratelimit(key='ip', rate='5/m', block=True)
-@sync_to_async
-def exchange_keys(request):
-    response = {'error':0, 'message':'', 'data':{}}
-    creds = request.data
-    try:
-        if 'asymmetric_pub_exchange' in creds:
-            static_path = django_settings.STATICFILES_DIRS[0]
-            public_key_path = static_path+'/keys/public_key.pem'
-            with open(public_key_path, 'rb') as file:
-                pem_data = file.read()
-            client_secret_text = base64.b64encode(pem_data).decode('utf-8')
-            response['data']['id_rsa_pub'] = client_secret_text
-        else:
-            raise Exception("Credentials missing")
-    except Exception as e:
-        response['error']+=1
         response['message'] = str(e)
     return Response(response)
 

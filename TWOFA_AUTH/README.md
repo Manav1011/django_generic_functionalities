@@ -35,4 +35,13 @@ Upon successful authentication, log the user in without requiring further authen
     - Send another TOTP to the user.
 
 > Note: One-time backup codes can be generated for situations where the user does not have access to the authenticator app. The user can request these backup codes from the admin.
->
+
+# API AUTH
+
+* We're using JWT tokens for user authentication
+* which provided enhanced security due to robust access/refresh token mechanism
+
+# END-TO-END Encryption
+
+* After login we'll implement a asymmetric encrypted session between client and servery which'll provide end-to-end encryption.
+* so any communicaiton between client to server or vice versa will be encrypted.

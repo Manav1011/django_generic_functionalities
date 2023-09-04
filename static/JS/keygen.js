@@ -48,6 +48,7 @@ async function generateRSAKeyPair() {
     const pemBody = base64.match(/.{1,64}/g).join('\n');
     return `${pemHeader}\n${pemBody}\n${pemFooter}`;
   }
+
   window.client = window.client || {};
   generateRSAKeyPair().then(({ publicKeyPEM, privateKeyPEM }) => {
         window.client.id_rsa = privateKeyPEM

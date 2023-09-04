@@ -57,19 +57,20 @@ class AuthConsumer(AsyncWebsocketConsumer):
                         self.user.is_active = True
                         await self.save_user_obj()
                         self.response['error'] = 0
-                        self.response['message'] = 'User successfully signed up'
-                        org_val['closed'] = True
-                        cache.set(self.secret,org_val,60)
-                        self.response['data'] = {'verified':True,'secret':self.secret}
-                        await self.send(json.dumps(self.response))
-                    if text_data['view'] == 'login':
-                        self.response['error'] = 0
-                        self.response['message'] = 'User successfully Logged up'
+                        self.response['message'] = 'User successfully signed up and logged in'
                         org_val['closed'] = True
                         cache.set(self.secret,org_val,60)
                         tokens = await self.get_tokens()
                         self.response['data'] = {'verified':True,'tokens':tokens}
                         await self.send(json.dumps(self.response))
+                    if text_data['view'] == 'login':
+                        self.response['error'] = 0
+                        self.response['message'] = 'User successfully Logged in'
+                        org_val['closed'] = True
+                        cache.set(self.secret,org_val,60)
+                        tokens = await self.get_tokens()
+                        self.response['data'] = {'verified':True,'tokens':tokens}
+                        await self.send(json.dumps(self.response))  
                     await self.close()
                 elif verified == False:
                     self.response['error']+=1

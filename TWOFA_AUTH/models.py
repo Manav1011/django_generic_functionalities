@@ -9,4 +9,4 @@ class KeyStore(models.Model):
     pub = models.TextField()
 
     def __str__(self):
-        return self.user.email
+        return f"Public key of {self.user.email}"
